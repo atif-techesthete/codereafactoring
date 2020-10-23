@@ -35,10 +35,11 @@ class BookingController extends Controller
      */
     public function index(Request $request)
     {
+        /*
+         * instead of using the env use the constants in config constants file to secure the constants
+         */
         if($user_id = $request->get('user_id')) {
-
             $response = $this->repository->getUsersJobs($user_id);
-
         }
         elseif($request->__authenticatedUser->user_type == env('ADMIN_ROLE_ID') || $request->__authenticatedUser->user_type == env('SUPERADMIN_ROLE_ID'))
         {
@@ -80,7 +81,7 @@ class BookingController extends Controller
      */
     public function update($id, Request $request)
     {
-        $data = $request->all();
+        $data  = $request->all();
         $cuser = $request->__authenticatedUser;
         $response = $this->repository->updateJob($id, array_except($data, ['_token', 'submit']), $cuser);
 
@@ -120,6 +121,7 @@ class BookingController extends Controller
      * @param Request $request
      * @return mixed
      */
+
     public function acceptJob(Request $request)
     {
         $data = $request->all();
@@ -136,7 +138,6 @@ class BookingController extends Controller
         $user = $request->__authenticatedUser;
 
         $response = $this->repository->acceptJobWithId($data, $user);
-
         return response($response);
     }
 
@@ -184,70 +185,76 @@ class BookingController extends Controller
      */
     public function getPotentialJobs(Request $request)
     {
-        $data = $request->all();
+        /*
+         * removed un necessary code
+         */
+
         $user = $request->__authenticatedUser;
-
         $response = $this->repository->getPotentialJobs($user);
-
         return response($response);
     }
 
+
+
+    /* Description =>
+       * Create a custom function that can handle both empty, null and undefined values
+       * Just return true if value is valid otherwise false
+    */
+
+    public function ifExist($value){
+        return isset($value) && !empty($value) ? true:false;
+    }
     public function distanceFeed(Request $request)
     {
         $data = $request->all();
 
-        if (isset($data['distance']) && $data['distance'] != "") {
-            $distance = $data['distance'];
-        } else {
-            $distance = "";
-        }
-        if (isset($data['time']) && $data['time'] != "") {
-            $time = $data['time'];
-        } else {
-            $time = "";
-        }
-        if (isset($data['jobid']) && $data['jobid'] != "") {
-            $jobid = $data['jobid'];
-        }
 
-        if (isset($data['session_time']) && $data['session_time'] != "") {
-            $session = $data['session_time'];
-        } else {
-            $session = "";
-        }
+        //using the ternory operator code can be easily formateed with the the help of custom function
+        $distance   = $this->ifExist($data['distance']) ?   $data['distance'] : "";
+        $time       = $this->ifExist($data['time'])     ?   $data['time'] :"";
+        $jobid      = $this->ifExist($data['jobid'])    ?   $data['jobid']:"";
+        $session    = $this->ifExist($data['session_time']) ? $data['session_time']:"";
 
-        if ($data['flagged'] == 'true') {
-            if($data['admincomment'] == '') return "Please, add comment";
-            $flagged = 'yes';
-        } else {
-            $flagged = 'no';
-        }
-        
-        if ($data['manually_handled'] == 'true') {
-            $manually_handled = 'yes';
-        } else {
-            $manually_handled = 'no';
-        }
 
-        if ($data['by_admin'] == 'true') {
-            $by_admin = 'yes';
-        } else {
-            $by_admin = 'no';
+        if($data['flagged'] == 'true'){
+            if(empty($data['admincomment'])){
+                return "Please, add comment";
+            }
+            $flagged = "yes";
         }
+        /*
+         * Dont need to use the if else condition because function execution stops onces the
+         * return statement will execute
+         */
 
-        if (isset($data['admincomment']) && $data['admincomment'] != "") {
-            $admincomment = $data['admincomment'];
-        } else {
-            $admincomment = "";
-        }
+        $flagged = 'no';
+
+        /*
+         * Well for very simple situation to just assign the value we can refactor code using
+         * ternaory operator
+         */
+
+        /*
+            * Instead of using the string true/false use the boolen just
+        */
+
+        $manually_handled = $data['manually_handled'] == 'true' ?  'yes' : 'no';
+        $by_admin         = $data['by_admin'] == 'true' ? 'yes':'no';
+
+        $admincomment     = $this->ifExist($data['admincomment']) ? $data['admincomment'] :"";
+
+
+
         if ($time || $distance) {
 
-            $affectedRows = Distance::where('job_id', '=', $jobid)->update(array('distance' => $distance, 'time' => $time));
+            $affectedRows = Distance::where('job_id', '=', $jobid)->update(['distance' => $distance, 'time' => $time]);
         }
 
         if ($admincomment || $session || $flagged || $manually_handled || $by_admin) {
 
-            $affectedRows1 = Job::where('id', '=', $jobid)->update(array('admin_comments' => $admincomment, 'flagged' => $flagged, 'session_time' => $session, 'manually_handled' => $manually_handled, 'by_admin' => $by_admin));
+            $affectedRows1 = Job::where('id', '=', $jobid)->update([
+                'admin_comments' => $admincomment, 'flagged' => $flagged, 'session_time' => $session, 'manually_handled' => $manually_handled, 'by_admin' => $by_admin
+            ]);
 
         }
 
@@ -258,7 +265,6 @@ class BookingController extends Controller
     {
         $data = $request->all();
         $response = $this->repository->reopen($data);
-
         return response($response);
     }
 
